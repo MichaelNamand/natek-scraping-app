@@ -1,18 +1,18 @@
-const puppeteer = require('puppeteer')
-const express = require('express')
+const puppeteer = require('puppeteer');
+const express = require('express');
 
-const app = express()
-const port = 3000
+const app = express();
+const port = 3000;
 
 app.get('/scrape', (req, res) => {
     getData().then(() => {
         res.send('Finished! Check your downloads folder, you should find two files named \'products.csv\' and \'categories.csv\'');
     });
-})
+});
 
 app.listen(port, () => {
-    console.log(`listening at http://localhost:${port}. Call the route : localhost:3000/scrape`)
-})
+    console.log(`listening at http://localhost:${port}. Call the route : localhost:3000/scrape`);
+});
 
 const getData = async () => {
     let browser = await puppeteer.launch({
@@ -25,19 +25,25 @@ const getData = async () => {
 
     // Array containing all the products with its details
     const results = [];
-    console.log('Scraping in progress. Please wait...')
+    console.log('Scraping in progress. Please wait...');
 
     // Wait for the required DOM to be rendered
     await page.waitForSelector('#main');
 
+    // Scrap hierarchy categories section
     const hierarchyCategories = await page.evaluate(() => {
-        const hierarchyCategories = []
-        const ul = document.querySelector('#woocommerce_product_categories-2 .product-categories')
+        const hierarchyCategories = [];
+        const ul = document.querySelector('#woocommerce_product_categories-2 .product-categories');
+        /**
+         * Browse the categories list. If a category is a parent, then a recursive call is made to browse its childs
+         * @param ul: current ul DOM node
+         * @param parent: parent's name
+         */
         let browseCategories = (ul, parent) => {
             for (let list of ul.getElementsByTagName('li')) {
                 const category = {
-                        name: list.querySelector('a').innerText,
-                        link: list.querySelector('a').href
+                    name: list.querySelector('a').innerText,
+                    link: list.querySelector('a').href
                 };
                 if (list.classList.contains('cat-parent')) {
                     browseCategories(list.querySelector('ul'), list.querySelector('a').innerText);
@@ -48,10 +54,9 @@ const getData = async () => {
             }
         };
         browseCategories(ul);
-        console.log(hierarchyCategories)
         return hierarchyCategories;
     });
-
+    // Scrap the products of the current page
     return await scrapeCurrentPage();
 
     /**
@@ -71,7 +76,7 @@ const getData = async () => {
          * @param link: the url of the current product to scrap
          * @returns {Promise<>}
          */
-        let getProductDetailsFromProductPage = (link) => new Promise(async(resolve) => {
+        let getProductDetailsFromProductPage = (link) => new Promise(async (resolve) => {
 
             let productPage = await browser.newPage();
             await productPage.goto(link);
@@ -135,8 +140,10 @@ const getData = async () => {
                         }
                     }
                 }
-                return {id, title, productImageUrl, SKU, productCategory, description, colorOption, sizeOption,
-                    attributes, price, relatedProductsIds}
+                return {
+                    id, title, productImageUrl, SKU, productCategory, description, colorOption, sizeOption,
+                    attributes, price, relatedProductsIds
+                }
             });
             resolve(productDetails);
             await productPage.close();
@@ -148,13 +155,13 @@ const getData = async () => {
 
         // Check if there is still pagination
         let nextButtonExist;
-        try{
+        try {
             await page.$eval('.page-numbers .next', a => a.textContent);
             nextButtonExist = true;
+        } catch (err) {
         }
-        catch(err){}
         // If another page exists, click on it and do all the scraping stuff again
-        if(nextButtonExist){
+        if (nextButtonExist) {
             await page.click('.page-numbers .next');
             return scrapeCurrentPage(); // Call this function recursively
         }
@@ -200,6 +207,7 @@ const getData = async () => {
 
                 document.body.removeChild(element);
             }
+
             download('products.csv', arrays[0]);
             download('categories.csv', arrays[1]);
         }, arrays);
