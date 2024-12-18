@@ -5,13 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node main.js"
+    "start": "node main.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1",
-    "puppeteer": "^5.5.0"
+    "express": "5.0.0",
+    "puppeteer": "^23.8.0",
+    "xhr2": "^0.2.1"
   }
 }
